@@ -8,6 +8,8 @@ export interface IUser extends Document {
   roles: string[];
   avatar: string | null;
   balance: number;
+  recoveryToken: string | null;
+  recoveryTokenExpires: number | null;
   level: number;
   exp: number;
   socketId: string | null;
@@ -23,6 +25,8 @@ const User = new Schema<IUser>({
   balance: { type: Number, default: 0 },
   level: { type: Number, default: 1 },
   exp: { type: Number, default: 0 },
+  recoveryToken: { type: String, default: null },
+  recoveryTokenExpires: { type: Number, default: null },
   socketId: { type: String, default: null },
   createdAt: { type: Date, default: Date.now() },
 });

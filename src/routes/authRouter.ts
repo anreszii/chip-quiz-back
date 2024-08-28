@@ -2,6 +2,7 @@ import { body, check } from "express-validator";
 import { authController } from "../controllers/authController";
 import { Router } from "express";
 import { upload } from "../config/s3";
+import recoveryMiddleware from "../middleware/recoveryMiddleware";
 
 const router: Router = Router();
 
@@ -25,6 +26,6 @@ router.post(
 router.get("/refresh", authController.refresh);
 router.get("/logout", authController.logout);
 router.post("/sendReset", authController.sendReset);
-router.post("/reset", authController.reset);
+router.post("/reset/:token", recoveryMiddleware, authController.reset);
 
 export default router;

@@ -1,9 +1,10 @@
 import { authService } from "../services/authService";
 import { NextFunction, Request, Response } from "express";
-import User from "../models/User";
+import User, { IUser } from "../models/User";
 import ApiError from "../exceptions/apiError";
 import { mailerService } from "../services/mailerService";
 import bcrypt from "bcryptjs";
+import { v4 } from "uuid";
 
 class AuthController {
   async registration(req: Request, res: Response, next: NextFunction) {
@@ -68,11 +69,18 @@ class AuthController {
         return next(ApiError.BadRequest("Пользователь не найден"));
       }
 
+      const recoveryToken = v4();
+      const recoveryTokenExpires = Date.now() + 3600000;
+
+      user.recoveryToken = recoveryToken;
+      user.recoveryTokenExpires = recoveryTokenExpires;
+      await user.save();
+
       const e = await mailerService.sendMail({
         to: email,
         from: "noreply@myotaku.fun",
         subject: "Сброс пароля",
-        text: "Ссылка для сброса пароля: ",
+        text: `Ссылка для сброса пароля: http://.../recovery/${recoveryToken}`,
       });
 
       if (e) {
@@ -87,9 +95,10 @@ class AuthController {
 
   async reset(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, newPassword } = req.body;
+      const { newPassword } = req.body;
+      const { token } = req.params;
 
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ recoveryToken: token });
 
       if (!user) {
         return next(ApiError.BadRequest("Пользователь не найден"));
@@ -97,7 +106,11 @@ class AuthController {
 
       const hashPassword = await bcrypt.hash(newPassword, 7);
 
-      await user.updateOne({ password: hashPassword });
+      await user.updateOne({
+        password: hashPassword,
+        recoveryToken: null,
+        recoveryTokenExpires: null,
+      });
 
       return res.json({ message: "Reset" });
     } catch (e) {
